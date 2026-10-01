@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>LeWeather</title>
+<meta name="theme-color" content="#0d0b1f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LeWeather">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="scene"></canvas>
+  </div>
+  <div id="flash"></div>
+  <div id="vignette"></div>
+
+  <div id="scroller">
+    <div id="ptr"><span id="ptr-text">PULL TO REFRESH</span></div>
+
+    <header id="topbar">
+      <button id="loc-btn" class="tb-btn loc"><i data-icon="pin"></i><span id="loc-name">LOCATING…</span></button>
+      <button id="auto-btn" class="tb-pill" aria-label="Auto refresh"><span class="dot"></span><span id="auto-label">AUTO</span></button>
+      <button id="refresh-btn" class="tb-btn ring-btn" aria-label="Refresh now">
+        <svg class="ring" viewBox="0 0 40 40"><circle class="ring-bg" cx="20" cy="20" r="17"/><circle id="ring-fg" class="ring-fg" cx="20" cy="20" r="17"/></svg>
+        <i data-icon="refresh"></i>
+        <span id="count">60</span>
+      </button>
+      <button id="sound-btn" class="tb-btn" aria-label="Sound"><i id="sound-icon" data-icon="sound"></i></button>
+      <button id="gear-btn" class="tb-btn" aria-label="Settings"><i data-icon="gear"></i></button>
+    </header>
+
+    <section id="hero">
+      <div id="status-line"></div>
+      <button id="alert-banner" hidden></button>
+      <div id="hero-text">
+        <div id="level">LOADING WORLD…</div>
+        <div id="temp">--°</div>
+        <div id="cond">PRESS START</div>
+        <div id="hilo"></div>
+      </div>
+      <div id="tap-hint">TAP THE WORLD</div>
+    </section>
+
+    <main id="panels">
+      <section class="panel" id="p-alerts" hidden>
+        <h2><i data-icon="alert"></i> BOSS ALERTS</h2>
+        <div id="alerts-list"></div>
+      </section>
+
+      <section class="panel" id="p-next">
+        <h2><i data-icon="clock"></i> NEXT HOUR</h2>
+        <div id="next-summary" class="big-line">--</div>
+        <div id="next-bars" class="next-bars"></div>
+        <div id="next-sub" class="sub-line"></div>
+      </section>
+
+      <section class="panel" id="p-hourly">
+        <h2><i data-icon="clock"></i> 48-HOUR SPEEDRUN</h2>
+        <div class="h-scroll" id="h-scroll">
+          <div id="h-row" class="h-row"></div>
+          <canvas id="h-graph"></canvas>
+        </div>
+        <div class="legend"><span class="lg t">■ TEMP</span><span class="lg p">■ RAIN CHANCE</span></div>
+      </section>
+
+      <section class="panel" id="p-daily">
+        <h2><i data-icon="cal"></i> 10-DAY QUEST LOG</h2>
+        <div id="d-list"></div>
+      </section>
+
+      <section class="panel" id="p-stats">
+        <h2><i data-icon="heart"></i> PLAYER STATS</h2>
+        <div id="stats" class="stats"></div>
+      </section>
+
+      <section class="panel" id="p-sky">
+        <h2><i data-icon="sun"></i> SUN &amp; MOON</h2>
+        <div id="sky-box"></div>
+      </section>
+
+      <footer id="foot">
+        <button id="gallery-btn" class="pix-btn"><i data-icon="pad"></i> FX GALLERY</button>
+        <p>Weather: Open-Meteo · Alerts: NWS (US) · Air: Open-Meteo AQ<br>LeWeather v1.0 · Made with pixels &amp; questionable puns</p>
+      </footer>
+    </main>
+  </div>
+
+  <div id="bubble" hidden></div>
+
+  <!-- DEMO BAR -->
+  <div id="demo-bar" hidden>
+    <button id="demo-prev" class="pix-btn sm">◀</button>
+    <div id="demo-name">DEMO</div>
+    <button id="demo-next" class="pix-btn sm">▶</button>
+    <button id="demo-exit" class="pix-btn sm red">EXIT</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="settings" class="sheet" hidden>
+    <div class="sheet-card">
+      <div class="sheet-head"><h2>OPTIONS</h2><button class="x-btn" data-close="settings">✕</button></div>
+      <div class="opt" data-opt="auto"><span>AUTO REFRESH (1 MIN)</span><b class="sw"></b></div>
+      <div class="opt" data-opt="units"><span>UNITS</span><b class="seg"><em data-v="F">°F</em><em data-v="C">°C</em></b></div>
+      <div class="opt" data-opt="sound"><span>SOUND EFFECTS</span><b class="sw"></b></div>
+      <div class="opt" data-opt="ambient"><span>AMBIENT WEATHER SOUNDS</span><b class="sw"></b></div>
+      <div class="opt" data-opt="crt"><span>CRT SCANLINES</span><b class="sw"></b></div>
+      <div class="opt" data-opt="tilt"><span>3D MOTION TILT</span><b class="sw"></b></div>
+      <div class="opt" data-opt="shake"><span>SCREEN SHAKE</span><b class="sw"></b></div>
+      <div class="opt-row">
+        <button class="pix-btn" id="opt-loc"><i data-icon="pin"></i> CHANGE LOCATION</button>
+        <button class="pix-btn" id="opt-gallery"><i data-icon="pad"></i> FX GALLERY</button>
+      </div>
+      <p class="fine">Data refreshes every minute when AUTO is on. Last forecast is saved on the phone, so it still shows when you're offline.</p>
+    </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div id="search" class="sheet" hidden>
+    <div class="sheet-card">
+      <div class="sheet-head"><h2>WARP ZONE</h2><button class="x-btn" data-close="search">✕</button></div>
+      <button class="pix-btn wide" id="use-gps"><i data-icon="pin"></i> USE MY LOCATION</button>
+      <div class="search-row"><input id="q" type="search" placeholder="Search a city…" autocomplete="off" enterkeyhint="search"><button class="pix-btn sm" id="q-go">GO</button></div>
+      <div id="results"></div>
+    </div>
+  </div>
+
+  <!-- TITLE SCREEN -->
+  <div id="title">
+    <div class="title-inner">
+      <div class="logo"><span class="le">Le</span>Weather</div>
+      <div class="tagline">PIXEL FORECAST ENGINE</div>
+      <div id="title-status">REQUESTING LOCATION…</div>
+      <div class="press">▶ PRESS START ◀</div>
+      <div class="copy">© 2026 LE STUDIOS · 1 PLAYER</div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <div id="crt"></div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
