@@ -2,7 +2,6 @@
 (() => {
 'use strict';
 
-/* =================== UTILITIES =================== */
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -24,7 +23,6 @@ const store = {
 const settings = Object.assign({ units: 'F', sound: true, ambient: true, crt: true, tilt: false, auto: true, shake: true }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 
-/* =================== PIXEL UI ICONS (8x8 bitmaps -> SVG) =================== */
 const BITMAPS = {
   pin: ['..XXXX..', '.XXXXXX.', 'XXX..XXX', 'XXX..XXX', '.XXXXXX.', '..XXXX..', '...XX...', '...XX...'],
   refresh: ['..XXXX.X', '.X....XX', 'X....XXX', 'X.......', 'X......X', 'X......X', '.X....X.', '..XXXX..'],
@@ -46,7 +44,6 @@ function pixelSVG(name, color = 'currentColor') {
 }
 function hydrateIcons(root = document) { root.querySelectorAll('i[data-icon]').forEach(i => { i.innerHTML = pixelSVG(i.dataset.icon); }); }
 
-/* =================== WEATHER CODES =================== */
 const WMO = {
   0: 'Clear Sky', 1: 'Mainly Clear', 2: 'Partly Cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Freezing Fog',
   51: 'Light Drizzle', 53: 'Drizzle', 55: 'Heavy Drizzle', 56: 'Freezing Drizzle', 57: 'Heavy Freezing Drizzle',
@@ -67,7 +64,6 @@ function kindFor(code) {
   return 'cloudy';
 }
 
-/* =================== PIXEL WEATHER ICONS (procedural, 16x16) =================== */
 const iconCache = {};
 function iconURL(kind, night = false, size = 16) {
   const key = kind + (night ? 'n' : 'd');
@@ -86,8 +82,7 @@ function iconURL(kind, night = false, size = 16) {
   const moon = (cx, cy, r) => {
     for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
       const d = x * x + y * y; if (d > r * r + r * .6) continue;
-      const cut = (x - 2) * (x - 2) + (y + 1) * (y + 1) < (r - .5) * (r - .5);
-      if (cut) continue;
+      if ((x - 2) * (x - 2) + (y + 1) * (y + 1) < (r - .5) * (r - .5)) continue;
       P(cx + x, cy + y, d > (r - 1) * (r - 1) ? '#a9a2d8' : '#f2edc4');
     }
   };
@@ -101,7 +96,7 @@ function iconURL(kind, night = false, size = 16) {
       P(ox + x, oy + y, edge ? pal[3] : (y < 4 ? pal[0] : y < 7 ? pal[1] : pal[2]));
     }
   };
-  const drops = (col, list) => list.forEach(([x, y]) => { P(x, y, col); P(x - 0, y + 1, col); });
+  const drops = (col, list) => list.forEach(([x, y]) => { P(x, y, col); P(x, y + 1, col); });
   const flakes = list => list.forEach(([x, y]) => { P(x, y, '#fff'); P(x - 1, y, '#bfe0ff'); P(x + 1, y, '#bfe0ff'); P(x, y - 1, '#bfe0ff'); P(x, y + 1, '#bfe0ff'); });
   const body = night ? moon : sun;
   switch (kind) {
@@ -121,7 +116,6 @@ function iconURL(kind, night = false, size = 16) {
       if (kind === 'hail') { P(11, 12, '#fff'); P(12, 12, '#dfe8ff'); P(11, 13, '#dfe8ff'); P(13, 14, '#fff'); P(3, 13, '#fff'); }
       else drops('#4fb4ff', [[11, 12], [3, 12]]);
       break;
-    case 'wind': for (let i = 0; i < 3; i++) for (let x = 1; x < 13 - i * 2; x++) P(x + i, 4 + i * 4, '#d6e4ff'); P(13, 3, '#d6e4ff'); P(12, 7, '#d6e4ff'); break;
     default: cloud(0, 3, false);
   }
   return (iconCache[key] = c.toDataURL());
@@ -147,9 +141,8 @@ function moonPhase(date = new Date()) {
   return { phase: p, name: names[Math.round(p * 8) % 8], illum: Math.round((1 - Math.cos(p * 2 * Math.PI)) / 2 * 100) };
 }
 
-/* =================== AUDIO (WebAudio chiptune, no files needed) =================== */
 const SFX = (() => {
-  let ctx = null, master, amb, nodes = {}, sched = null, cur = {};
+  let ctx = null, master, amb, nodes = {}, cur = {};
   const enabled = () => settings.sound;
   function noiseBuffer(sec, brown) {
     const b = ctx.createBuffer(1, ctx.sampleRate * sec, ctx.sampleRate), d = b.getChannelData(0);
@@ -173,12 +166,12 @@ const SFX = (() => {
     const white = noiseBuffer(2.5), brown = noiseBuffer(3, true);
     nodes.rain = loop(white, [filt('highpass', 900), filt('lowpass', 7000)]);
     nodes.rainLow = loop(brown, [filt('lowpass', 500)]);
-    const wf = filt('bandpass', 420, .8); nodes.windFilter = wf;
+    const wf = filt('bandpass', 420, .8);
     nodes.wind = loop(brown, [wf]);
     nodes.fire = loop(brown, [filt('lowpass', 900)]);
     nodes.rumble = loop(brown, [filt('lowpass', 120)]);
     const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = .13; lg.gain.value = 260; lfo.connect(lg); lg.connect(wf.frequency); lfo.start();
-    sched = setInterval(tickAmbient, 180);
+    setInterval(tickAmbient, 180);
     applyAmbient();
   }
   function env(g, t, a, d, v) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
@@ -266,7 +259,6 @@ const CLOUD_PAL = {
   fog:   ['#f0f2f4', '#dde2e6', '#c3cad0', '#a8b0b8', '#7f8890'],
 };
 
-/* =================== SCENE DESCRIPTOR =================== */
 function makeScene(o) {
   const k = o.kind || 'clear';
   const s = { kind: k, night: !!o.night, dusk: !!o.dusk, precip: null, intensity: 0, clouds: 0, cloudType: 'white', lightning: false, fog: 0,
@@ -300,7 +292,6 @@ function makeScene(o) {
   else if (k === 'cloudy') theme = 'cloudy';
   else if (s.wind > .6) theme = 'wind';
   else theme = s.night ? 'night' : (s.dusk ? 'dusk' : 'day');
-  if (s.night && s.dusk && (theme === 'day')) theme = 'dusk';
   s.theme = theme;
   s.dim = s.night && !['night', 'dusk', 'fire'].includes(theme);
   if (s.night && s.cloudType === 'white') s.cloudType = 'night';
@@ -311,7 +302,7 @@ function makeScene(o) {
   s.birds = !s.night && ['clear', 'mostly', 'partly'].includes(k) && !s.heat && !s.fire && !s.tornado;
   s.fireflies = s.night && !s.precip && s.temp >= 60 && !s.cold && !s.fire && !s.tornado;
   s.deck = s.clouds >= 8;
-  s.key = JSON.stringify([theme, k, s.night, s.dusk, s.heat, s.cold, s.fire, s.tornado, s.wind > .6, s.precip, s.intensity]);
+  s.key = JSON.stringify([theme, k, s.night, s.dusk, s.heat, s.cold, s.fire, s.tornado, s.wind > .6, s.precip, s.intensity, s.smoke]);
   s.level = levelName(s);
   return s;
 }
@@ -325,6 +316,7 @@ function levelName(s) {
   if (s.kind === 'heavy') return 'WORLD 3-4 · MONSOON MAYHEM';
   if (s.kind === 'rain') return 'WORLD 3-1 · PUDDLE PALACE';
   if (s.kind === 'drizzle') return 'WORLD 3-0 · DRIZZLE DUNGEON';
+  if (s.smoke) return 'WORLD 4-2 · SMOKE SCREEN';
   if (s.kind === 'fog') return 'WORLD 4-1 · FOG FOREST';
   if (s.heat) return 'WORLD 7-1 · LAVA LANDS';
   if (s.cold) return 'WORLD 5-0 · FROSTBITE FORTRESS';
@@ -335,21 +327,20 @@ function levelName(s) {
   return 'WORLD 1-1 · SUNNY MEADOWS';
 }
 
-/* =================== SCENE ENGINE =================== */
 const Scene = (() => {
   const cv = $('#scene'), ctx = cv.getContext('2d', { alpha: false });
   ctx.imageSmoothingEnabled = false;
-  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return c; };
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); c.getContext('2d').imageSmoothingEnabled = false; return c; };
   let W = 192, H = 400, scale = 2, HY = 200, FY = 264;
   let sc = makeScene({ kind: 'clear', night: false }), pal = THEMES.day;
-  let L = {}; // prerendered layers
+  let L = {};
   let t = 0, last = 0, running = true;
   let drops = [], splashes = [], clouds = [], stars = [], bolts = [], streaks = [], leaves = [], embers = [], birds = [], flies = [], puffs = [], zzz = [], debris = [], drips = [];
   let flashA = 0, nextBolt = 2, nextBird = 2, nextShoot = 5, shoot = null, nextDrip = 1;
   let cam = 0, tilt = { x: 0, y: 0 }, tiltT = { x: 0, y: 0 };
   let fire = null;
   let sunFrac = .5, moonP = .5;
-  const ch = { x: 0, jy: 0, vy: 0, blink: 3, blinking: 0, alarm: 0, breath: 1.5 };
+  const ch = { x: 0, jy: 0, vy: 0, blink: 3, blinking: 0, alarm: 0, breath: 1.5, wink: 0 };
   let buf = null;
 
   function P(g, x, y, c) { g.fillStyle = c; g.fillRect(x | 0, y | 0, 1, 1); }
@@ -366,13 +357,11 @@ const Scene = (() => {
     build();
   }
 
-  /* ---------- prerender ---------- */
   function build() {
     pal = THEMES[sc.theme] || THEMES.day;
     const dim = sc.dim ? .42 : 1;
     const tint = c => { let v = hex2rgb(c); if (sc.dim) v = [v[0] * dim * .85, v[1] * dim * .9, v[2] * dim * 1.15 + 10]; return v; };
     const rng = mulberry32(1234);
-    // Sky
     {
       const c = mk(W, HY + 2), g = c.getContext('2d'), img = g.createImageData(W, HY + 2), d = img.data;
       const a = tint(pal.sky[0]), b = tint(pal.sky[1]), bands = 9;
@@ -384,16 +373,16 @@ const Scene = (() => {
       }
       g.putImageData(img, 0, 0); L.sky = c;
     }
-    // Far mountains
     {
       const w = W + 60, c = mk(w, HY + 1), g = c.getContext('2d');
       const base = tint(pal.far), hi = shade(base, 1.25), lo = shade(base, .8);
       const snowy = !['heat', 'fire', 'tornado'].includes(sc.theme);
       const ph = [rng() * 6, rng() * 6, rng() * 6];
+      const hf = x => Math.sin(x * .045 + ph[0]) * 14 + Math.sin(x * .11 + ph[1]) * 7;
       for (let x = 0; x < w; x++) {
-        const hgt = 30 + Math.sin(x * .045 + ph[0]) * 14 + Math.sin(x * .11 + ph[1]) * 7 + Math.sin(x * .23 + ph[2]) * 3;
+        const hgt = 30 + hf(x) + Math.sin(x * .23 + ph[2]) * 3;
         const top = Math.round(HY - hgt);
-        const slope = (Math.sin((x + 1) * .045 + ph[0]) * 14 + Math.sin((x + 1) * .11 + ph[1]) * 7) - (Math.sin(x * .045 + ph[0]) * 14 + Math.sin(x * .11 + ph[1]) * 7);
+        const slope = hf(x + 1) - hf(x);
         for (let y = top; y <= HY; y++) {
           let col = slope > 0 ? hi : lo;
           if (y - top > 6) col = base;
@@ -404,7 +393,6 @@ const Scene = (() => {
       }
       L.far = c;
     }
-    // Near hills + trees
     {
       const w = W + 100, c = mk(w, HY + 1), g = c.getContext('2d');
       const base = tint(pal.near), hi = shade(base, 1.2), tree = tint(pal.tree);
@@ -418,8 +406,8 @@ const Scene = (() => {
       const snowTop = ['snow', 'cold'].includes(sc.theme);
       for (let x = 4; x < w - 4; x += 5 + Math.floor(rng() * 9)) {
         const ty = tops[x], hgt = 7 + Math.floor(rng() * 8);
-        if (sc.theme === 'heat') { // cactus
-          const cc = [70, 140, 60]; g.fillStyle = rgb(cc); g.fillRect(x, ty - hgt, 2, hgt);
+        if (sc.theme === 'heat') {
+          g.fillStyle = rgb([70, 140, 60]); g.fillRect(x, ty - hgt, 2, hgt);
           g.fillRect(x - 2, ty - hgt + 3, 2, 1); g.fillRect(x - 2, ty - hgt + 1, 1, 3); g.fillRect(x + 2, ty - hgt + 5, 2, 1); g.fillRect(x + 3, ty - hgt + 3, 1, 3);
           g.fillStyle = rgb([110, 190, 90]); g.fillRect(x, ty - hgt, 1, hgt);
           continue;
@@ -435,7 +423,6 @@ const Scene = (() => {
       }
       L.near = c;
     }
-    // Ground
     {
       const h = H - HY, c = mk(W, h), g = c.getContext('2d'), img = g.createImageData(W, h), d = img.data;
       const base = tint(pal.ground), far = mix(base, tint(pal.sky[1]), .35), near = shade(base, 1.08);
@@ -447,7 +434,6 @@ const Scene = (() => {
       }
       g.putImageData(img, 0, 0); L.ground = c;
     }
-    // Sun / moon sprites
     {
       const hot = sc.heat, R = hot ? 14 : 11, c = mk(R * 2 + 12, R * 2 + 12), g = c.getContext('2d'), cx = R + 6, cy = R + 6;
       const pals = sc.theme === 'fire' ? ['#ffb08a', '#ff6a3a', '#d8301a', '#8a1a0a'] : hot ? ['#fffbd0', '#fff07a', '#ffb13b', '#ff6a1f'] : sc.theme === 'dusk' ? ['#fff0c0', '#ffc86a', '#ff8a3a', '#d8501a'] : ['#fffbe0', '#fff07a', '#ffd84a', '#ffaa2a'];
@@ -468,7 +454,6 @@ const Scene = (() => {
       }
       L.moon = m;
     }
-    // Clouds
     {
       const cp = CLOUD_PAL[sc.cloudType] || CLOUD_PAL.white;
       const cpal = sc.dim ? cp.map(c => rgb(shade(hex2rgb(c), .5))) : cp;
@@ -481,7 +466,6 @@ const Scene = (() => {
         clouds.push({ spr, x: rnd(-40, W), y: Math.round(rnd(H * .05, H * (sc.deck ? .3 : .36))), depth, sp: rnd(.7, 1.3) });
       }
       clouds.sort((a, b) => a.depth - b.depth);
-      // cloud deck
       if (sc.deck) {
         const w = W + 80, h = Math.round(H * .2), c = mk(w, h + 14), g = c.getContext('2d');
         for (let i = 0; i < 14; i++) { const s = L.cloudSprites[i % 7]; g.drawImage(s, (i * 19) % w - 10, Math.floor(rnd(-6, h - s.height + 6))); }
@@ -489,7 +473,6 @@ const Scene = (() => {
         L.deck = c;
       } else L.deck = null;
     }
-    // Fog texture
     if (sc.fog || sc.smoke) {
       const w = W * 2, c = mk(w, H), g = c.getContext('2d'), r2 = mulberry32(9);
       const col = sc.smoke ? '150,110,90' : (sc.dim ? '120,130,150' : '235,240,245');
@@ -501,7 +484,6 @@ const Scene = (() => {
       }
       L.fog = c;
     } else L.fog = null;
-    // Frost + icicles
     if (sc.cold || sc.theme === 'snow') {
       const c = mk(W, H), g = c.getContext('2d'), r2 = mulberry32(5);
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -519,20 +501,16 @@ const Scene = (() => {
       }
       L.icicles = ic; L.icicleTop = top;
     } else { L.frost = null; L.icicles = null; }
-    // Stars
     stars = [];
     if (sc.stars) for (let i = 0; i < 80; i++) stars.push({ x: Math.floor(rng() * W), y: Math.floor(rng() * HY * .85), r: rng() * 5 + 1, p: rng() * 6, big: rng() < .1 });
-    // Fire
     if (sc.fire) {
       const fw = W, fh = Math.round(H * .22); fire = { fw, fh, b: new Uint8Array(fw * fh), c: mk(fw, fh), acc: 0 };
       fire.img = fire.c.getContext('2d').createImageData(fw, fh);
     } else fire = null;
-    // Reset particles
     drops = []; splashes = []; streaks = []; leaves = []; embers = []; birds = []; flies = []; debris = []; drips = [];
     if (sc.fireflies) for (let i = 0; i < 14; i++) flies.push({ x: rnd(W), y: rnd(HY - 10, FY + 10), vx: 0, vy: 0, p: rnd(6) });
     if (sc.tornado) for (let i = 0; i < 46; i++) debris.push({ a: rnd(6.28), u: rnd(.55, 1.05), s: rnd(2, 5), c: pick(['#5a3a1a', '#7a5a3a', '#3a3a3a', '#8a8a6a', '#a07040']), z: irnd(1, 2) });
     for (let i = 0; i < Math.round(4 + sc.wind * 22); i++) streaks.push({ x: rnd(W), y: rnd(H * .08, FY), len: irnd(5, 14), sp: rnd(80, 160) });
-    // CSS accent
     const app = $('#app'); app.style.setProperty('--accent', pal.accent); app.style.setProperty('--accent2', pal.accent2);
   }
 
@@ -559,59 +537,76 @@ const Scene = (() => {
     g.putImageData(img, 0, 0); return c;
   }
 
-  /* ---------- character sprite ---------- */
+  /* ---------- character sprite: Evan edition ----------
+     Swept-up light-brown quiff, mustache + stubble, rosy cheeks,
+     signature smirk, olive tee, jeans, white sneakers. */
   const SPR = [
-    '...kkkkkk...', '..khhhhhhk..', '.khhhhhhhhk.', '.khsssssshk.', '.ksesssseks.', '.kssssssssk.',
-    '.kSssmmssSk.', '..kSSSSSSk..', '..kcccccck..', '.kcccccccck.', 'kskccccccksk', 'kskCCCCCCksk',
-    '.k.kppppk.k.', '...kppppk...', '...kpkkpk...', '...kpkkpk...', '..kookkook..', '..kkkk.kkkk.'];
-  const SPAL = { k: '#1a1c2c', h: '#5d3a1a', s: '#f4c29a', S: '#d08b5b', e: '#1a1c2c', m: '#a33', c: '#3b5dc9', C: '#29366f', p: '#333c57', o: '#ef7d57', w: '#fff' };
+    '...kkkkkkk..',
+    '..kHHHHHHHk.',
+    '.kHHhhhhHHk.',
+    '.khhhhhhhhk.',
+    '.khhsssshhk.',
+    'kSsesssseshk',
+    'kSssssSsssSk',
+    '.krssSSssrk.',
+    '.ksbmmmmLsk.',
+    '.kbbbbLLbbk.',
+    '..kbbbbbbk..',
+    '.kgggSSgggk.',
+    'kggggggggggk',
+    'kskggggggksk',
+    'kskGGGGGGksk',
+    '...kpkkpk...',
+    '..kookkook..',
+    '..kkkk.kkkk.'];
+  const SPAL = { k: '#1a1c2c', h: '#8a5a32', H: '#b98048', s: '#f2c4a0', S: '#dba07e', r: '#ee9c88', e: '#3a2a1a', m: '#7a4524', L: '#b05a4a', b: '#cf9f80', g: '#7d8a62', G: '#5c6948', p: '#2f3a52', o: '#eee8da', w: '#fff', B: '#e43b44', T: '#ffd84a', U: '#e0a020' };
   function drawChar() {
     const S = 2, ox = Math.round(ch.x - cam * 3 - 12 + (sc.tornado ? rnd(-1, 1) : 0)), bob = (Math.floor(t * 2) % 2), oy = Math.round(FY - 36 + bob - ch.jy);
     const sp = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(ox + x * S, oy + y * S, S, S); };
-    // shadow
     const shw = Math.max(6, 11 - ch.jy * .15);
     ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(Math.round(ox + 12 - shw), FY - 1, Math.round(shw * 2), 2); ctx.fillRect(Math.round(ox + 12 - shw + 2), FY - 2, Math.round(shw * 2 - 4), 1);
     const sleeping = sc.night && !sc.precip && !sc.tornado && !sc.fire && !sc.lightning;
     const beanie = sc.cold || sc.theme === 'snow';
+    const wet = sc.precip && ['rain', 'drizzle', 'sleet', 'hail'].includes(sc.precip);
     for (let y = 0; y < SPR.length; y++) for (let x = 0; x < 12; x++) {
       let c = SPR[y][x]; if (c === '.') continue;
-      if (c === 'e' && (ch.blinking > 0 || sleeping)) c = sleeping ? 'k' : 's';
-      if (beanie && y < 3 && c !== 'k') c = y === 2 ? 'w' : 'B';
-      if (sc.theme === 'heat' && c === 'c') c = 'T'; if (sc.theme === 'heat' && c === 'C') c = 'U';
-      sp(x, y, c === 'B' ? '#e43b44' : c === 'T' ? '#ffd84a' : c === 'U' ? '#e0a020' : SPAL[c]);
+      if (c === 'e' && (ch.blinking > 0 || sleeping || (ch.wink > 0 && x === 8))) c = 'S';
+      if (beanie && y < 4 && c !== 'k') c = y === 3 ? 'w' : 'B';
+      if (sc.theme === 'heat' && c === 'g') c = 'T'; if (sc.theme === 'heat' && c === 'G') c = 'U';
+      sp(x, y, SPAL[c]);
     }
-    if (sleeping) { sp(3, 4, '#1a1c2c'); sp(2, 4, '#f4c29a'); sp(8, 4, '#1a1c2c'); }
-    if (beanie) { sp(5, -1, '#fff'); sp(6, -1, '#fff'); sp(5, -2, '#dfe8ff'); sp(6, -2, '#fff');
-      for (let x = 2; x < 10; x++) sp(x, 8, x % 2 ? '#e43b44' : '#fff');
-      const fl = Math.floor(t * 6) % 2; sp(9 + fl, 9, '#e43b44'); sp(9 + fl, 10, '#fff'); sp(10 + fl, 11, '#e43b44'); }
+    // legs: walking-ish idle shuffle on row 15 handled by sprite; add knee row
+    if (sleeping) { sp(3, 5, '#1a1c2c'); sp(8, 5, '#1a1c2c'); }
+    if (beanie) {
+      sp(5, -1, '#fff'); sp(6, -1, '#fff'); sp(5, -2, '#dfe8ff'); sp(6, -2, '#fff');
+      for (let x = 2; x < 10; x++) sp(x, 11, x % 2 ? '#e43b44' : '#fff');
+      const fl = Math.floor(t * 6) % 2; sp(9 + fl, 12, '#e43b44'); sp(9 + fl, 13, '#fff'); sp(10 + fl, 14, '#e43b44');
+    }
     const shades = sc.heat || sc.fire || (!sc.night && sc.kind === 'clear' && sc.temp >= 78);
-    if (shades) { for (let x = 2; x < 10; x++) sp(x, 4, '#0b0b14'); sp(5, 5, '#0b0b14'); sp(2, 5, '#0b0b14'); sp(3, 5, '#0b0b14'); sp(6, 5, '#0b0b14'); sp(7, 5, '#0b0b14'); sp(8, 5, '#0b0b14'); sp(3, 4, '#7ad7ff'); sp(7, 4, '#7ad7ff'); }
-    if (sc.heat || sc.fire) { const dy = (t * 6) % 6; sp(11, 2 + Math.floor(dy), '#7cc6ff'); }
-    if (sc.precip && ['rain', 'drizzle', 'sleet', 'hail'].includes(sc.precip)) {
-      for (let y = -2; y < 10; y++) sp(10, y, '#3a2a1a');
-      sp(9, 10, '#3a2a1a');
+    if (shades) { for (let x = 2; x < 10; x++) sp(x, 5, '#0b0b14'); [2, 3, 4, 7, 8, 9].forEach(x => sp(x, 6, '#0b0b14')); sp(3, 5, '#7ad7ff'); sp(8, 5, '#7ad7ff'); }
+    if (sc.heat || sc.fire) { const dy = (t * 6) % 6; sp(11, 3 + Math.floor(dy), '#7cc6ff'); }
+    if (wet) {
+      for (let y = -2; y < 13; y++) sp(10, y, '#3a2a1a');
+      sp(10, 13, '#f2c4a0');
       const cols = ['#e43b44', '#ffffff'];
       for (let y = 0; y < 6; y++) { const half = Math.round(Math.sqrt(1 - ((5 - y) / 6) ** 2) * 9.5); for (let x = -half; x <= half; x++) sp(10 + x, -8 + y, y === 5 && (x & 1) ? '#1a1c2c' : cols[Math.floor((x + 12) / 3) % 2]); }
       sp(10, -9, '#1a1c2c');
     }
     if (sc.fog) {
-      sp(11, 11, '#1a1c2c'); sp(11, 12, '#ffe94a'); sp(11, 13, '#ffb13b');
-      const gx = ox + 23, gy = oy + 25, fl = 7 + Math.sin(t * 9) * .7;
+      sp(11, 12, '#1a1c2c'); sp(11, 13, '#ffe94a'); sp(11, 14, '#ffb13b');
+      const gx = ox + 23, gy = oy + 27, fl = 7 + Math.sin(t * 9) * .7;
       for (let y = -9; y <= 9; y++) for (let x = -9; x <= 9; x++) { const dd = Math.hypot(x, y); if (dd < fl && BAYER[(y + 9) & 3][(x + 9) & 3] < (fl - dd) * 2.2) { ctx.fillStyle = 'rgba(255,230,120,.35)'; ctx.fillRect(gx + x, gy + y, 1, 1); } }
     }
     if (ch.alarm > 0 || sc.tornado) { if (Math.floor(t * 4) % 2) { ctx.fillStyle = '#ff3b3b'; ctx.fillRect(ox + 10, oy - 18, 4, 9); ctx.fillRect(ox + 10, oy - 7, 4, 3); } }
-    L.charHead = { x: ox + 12, y: oy - (sc.precip && ['rain', 'drizzle', 'sleet', 'hail'].includes(sc.precip) ? 20 : 6) };
-    return { ox, oy, sleeping };
+    L.charHead = { x: ox + 12, y: oy - (wet ? 20 : 6) };
   }
 
-  /* ---------- line helper ---------- */
   function line(x0, y0, x1, y1, col) {
     x0 |= 0; y0 |= 0; x1 |= 0; y1 |= 0; ctx.fillStyle = col;
     const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let err = dx + dy;
     for (let n = 0; n < 400; n++) { ctx.fillRect(x0, y0, 1, 1); if (x0 === x1 && y0 === y1) break; const e2 = 2 * err; if (e2 >= dy) { err += dy; x0 += sx; } if (e2 <= dx) { err += dx; y0 += sy; } }
   }
 
-  /* ---------- lightning ---------- */
   function spawnBolt() {
     const x0 = rnd(W * .1, W * .9), y0 = H * rnd(.1, .2), y1 = HY + rnd(-4, 10);
     const pts = [[x0, y0]]; let x = x0, y = y0; const branches = [];
@@ -623,16 +618,13 @@ const Scene = (() => {
     ch.alarm = 1.2;
     setTimeout(() => SFX.thunder(rnd(.6, 1)), rnd(120, 900));
   }
-  function shakeScreen(big) { const st = $('#stage'); const cl = big ? 'shake-big' : 'shake'; st.classList.remove('shake', 'shake-big'); void st.offsetWidth; st.classList.add(cl); }
+  function shakeScreen(big) { const st = $('#stage'); st.classList.remove('shake', 'shake-big'); void st.offsetWidth; st.classList.add(big ? 'shake-big' : 'shake'); }
 
-  /* ---------- update ---------- */
   function update(dt) {
     tilt.x = lerp(tilt.x, tiltT.x, .08); tilt.y = lerp(tilt.y, tiltT.y, .08);
     cam = tilt.x * 5 + Math.sin(t * .25) * 1.5;
     const wind = sc.wind;
-    // clouds
     for (const c of clouds) { c.x += (3 + wind * 22) * c.depth * c.sp * dt; if (c.x > W + 30) { c.x = -c.spr.width - 20; c.y = Math.round(rnd(H * .05, H * (sc.deck ? .3 : .36))); } }
-    // precipitation spawn
     if (sc.precip) {
       const I = sc.intensity, rate = { rain: 60 + 380 * I, drizzle: 70, snow: 30 + 130 * I, sleet: 160, hail: 110 }[sc.precip] || 0;
       let n = rate * dt; while (n > 0) { if (Math.random() < n) spawnDrop(); n -= 1; }
@@ -651,37 +643,28 @@ const Scene = (() => {
       if (d.y > H + 4 || d.x < -20 || d.x > W + 20) drops.splice(i, 1);
     }
     for (let i = splashes.length - 1; i >= 0; i--) { const s = splashes[i]; s.life -= dt; if (!s.ring) { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 260 * dt; } if (s.life <= 0) splashes.splice(i, 1); }
-    // lightning
     if (sc.lightning) { nextBolt -= dt; if (nextBolt <= 0) { spawnBolt(); nextBolt = sc.tornado ? rnd(1.8, 5) : rnd(3, 9); } }
     for (let i = bolts.length - 1; i >= 0; i--) { bolts[i].life -= dt; if (bolts[i].life <= 0) bolts.splice(i, 1); }
     flashA = Math.max(0, flashA - dt * 3.2);
     ch.alarm = Math.max(0, ch.alarm - dt);
-    // streaks
     for (const s of streaks) { s.x += s.sp * (.3 + wind) * dt; if (s.x > W + 20) { s.x = -20; s.y = rnd(H * .08, FY); } }
     if (wind > .5 && sc.precip !== 'snow' && leaves.length < 14 && Math.random() < dt * 6) leaves.push({ x: -4, y: rnd(HY - 30, FY + 6), vx: rnd(60, 130) * wind, vy: rnd(-10, 10), p: rnd(6), c: pick(sc.theme === 'fire' ? ['#ff7a1f', '#ffb13b'] : ['#e8a13b', '#c8502a', '#7fbf4a', '#d8c03a']) });
     for (let i = leaves.length - 1; i >= 0; i--) { const l = leaves[i]; l.x += l.vx * dt; l.y += (l.vy + Math.sin(t * 5 + l.p) * 30) * dt; if (l.x > W + 6) leaves.splice(i, 1); }
-    // embers
-    if (sc.fire) { if (Math.random() < dt * 30) embers.push({ x: rnd(W), y: FY - 4, vx: rnd(-8, 8), vy: rnd(-45, -20), life: rnd(1.2, 3), c: pick(['#ffe94a', '#ffb13b', '#ff6a1f']) });
-      updateFire(dt); }
+    if (sc.fire) { if (Math.random() < dt * 30) embers.push({ x: rnd(W), y: FY - 4, vx: rnd(-8, 8), vy: rnd(-45, -20), life: rnd(1.2, 3), c: pick(['#ffe94a', '#ffb13b', '#ff6a1f']) }); updateFire(dt); }
     for (let i = embers.length - 1; i >= 0; i--) { const e = embers[i]; e.x += (e.vx + Math.sin(t * 4 + i) * 10) * dt; e.y += e.vy * dt; e.life -= dt; if (e.life <= 0) embers.splice(i, 1); }
-    // birds
     if (sc.birds) { nextBird -= dt; if (nextBird <= 0) { const n = irnd(1, 4), y = rnd(H * .1, H * .3); for (let i = 0; i < n; i++) birds.push({ x: -6 - i * 7, y: y + (i % 2) * 4, sp: rnd(22, 30), p: rnd(6) }); nextBird = rnd(5, 12); } }
     for (let i = birds.length - 1; i >= 0; i--) { birds[i].x += birds[i].sp * dt; if (birds[i].x > W + 8) birds.splice(i, 1); }
-    // fireflies
     for (const f of flies) { f.vx += rnd(-30, 30) * dt; f.vy += rnd(-30, 30) * dt; f.vx *= .97; f.vy *= .97; f.x += f.vx * dt; f.y += f.vy * dt; if (f.x < 0) f.x = W; if (f.x > W) f.x = 0; f.y = clamp(f.y, HY - 30, FY + 20); }
-    // shooting star
     if (sc.stars) { nextShoot -= dt; if (nextShoot <= 0 && !shoot) { shoot = { x: rnd(W * .2, W), y: rnd(4, HY * .4), life: .7 }; nextShoot = rnd(6, 14); } }
     if (shoot) { shoot.x -= 160 * dt; shoot.y += 70 * dt; shoot.life -= dt; if (shoot.life <= 0) shoot = null; }
-    // tornado debris
     for (const d of debris) d.a += dt * (5 + (1 - d.u) * 6);
     if (sc.tornado && Math.random() < dt * .25 && settings.shake) shakeScreen(true);
-    // icicle drips
     if (L.icicles) { nextDrip -= dt; if (nextDrip <= 0) { const tip = pick(L.icicleTips); drips.push({ x: tip[0], y: tip[1], vy: 0 }); nextDrip = rnd(.6, 2); } }
     for (let i = drips.length - 1; i >= 0; i--) { const d = drips[i]; d.vy += 300 * dt; d.y += d.vy * dt; if (d.y > H) drips.splice(i, 1); }
-    // character
     if (ch.jy > 0 || ch.vy) { ch.vy -= 420 * dt; ch.jy += ch.vy * dt; if (ch.jy <= 0) { ch.jy = 0; ch.vy = 0; } }
     ch.blink -= dt; if (ch.blink <= 0) { ch.blinking = .12; ch.blink = rnd(2.5, 5); } ch.blinking = Math.max(0, ch.blinking - dt);
-    if (sc.cold || sc.theme === 'snow') { ch.breath -= dt; if (ch.breath <= 0) { puffs.push({ x: ch.x - cam * 3 - 2, y: FY - 25 - ch.jy, life: 1.2 }); ch.breath = rnd(1.4, 2.4); } }
+    ch.wink = Math.max(0, ch.wink - dt);
+    if (sc.cold || sc.theme === 'snow') { ch.breath -= dt; if (ch.breath <= 0) { puffs.push({ x: ch.x - cam * 3 - 2, y: FY - 21 - ch.jy, life: 1.2 }); ch.breath = rnd(1.4, 2.4); } }
     for (let i = puffs.length - 1; i >= 0; i--) { puffs[i].x -= 6 * dt; puffs[i].y -= 5 * dt; puffs[i].life -= dt; if (puffs[i].life <= 0) puffs.splice(i, 1); }
     const sleeping = sc.night && !sc.precip && !sc.tornado && !sc.fire && !sc.lightning;
     if (sleeping && Math.random() < dt * .8) zzz.push({ x: ch.x - cam * 3 + 8, y: FY - 34, life: 2.4 });
@@ -714,59 +697,47 @@ const Scene = (() => {
     fire.c.getContext('2d').putImageData(fire.img, 0, 0);
   }
 
-  /* ---------- draw ---------- */
   function draw() {
     ctx.globalAlpha = 1;
     ctx.drawImage(L.sky, 0, 0);
     if (flashA > 0) { ctx.fillStyle = `rgba(230,225,255,${flashA * .55})`; ctx.fillRect(0, 0, W, HY); }
-    // stars
     for (const s of stars) { const b = .5 + .5 * Math.sin(t * s.r + s.p); if (b < .25) continue; ctx.fillStyle = `rgba(255,255,240,${b})`; ctx.fillRect(s.x - (cam * .2 | 0), s.y, 1, 1);
       if (s.big && b > .8) { ctx.fillStyle = 'rgba(200,200,255,.6)'; ctx.fillRect(s.x - 1, s.y, 3, 1); ctx.fillRect(s.x, s.y - 1, 1, 3); } }
     if (shoot) { for (let i = 0; i < 10; i++) { ctx.fillStyle = `rgba(255,255,255,${(1 - i / 10) * shoot.life})`; ctx.fillRect(Math.round(shoot.x + i * 2.2), Math.round(shoot.y - i), 1, 1); } }
-    // sun / moon
     const bx = Math.round(W * .8 - cam * .3), arc = Math.sin(clamp(sunFrac, 0, 1) * Math.PI);
     if (sc.sun) {
       const sy = Math.round(HY * .72 - arc * HY * .3), R = L.sunR;
       const rays = sc.heat ? 16 : 12, rl = sc.heat ? 8 : 5;
-      ctx.fillStyle = sc.theme === 'fire' ? 'rgba(255,90,40,.0)' : (sc.heat ? '#ff8a2a' : '#ffd84a');
+      ctx.fillStyle = sc.heat ? '#ff8a2a' : '#ffd84a';
       if (sc.theme !== 'fire') for (let i = 0; i < rays; i++) { const a = i / rays * 6.283 + t * .4, pul = Math.sin(t * 3 + i) * 1.5; for (let k = 0; k < rl + pul; k++) { const r = R + 3 + k; ctx.fillRect(Math.round(bx + Math.cos(a) * r), Math.round(sy + Math.sin(a) * r), 1, 1); } }
       ctx.drawImage(L.sun, bx - L.sun.width / 2 | 0, sy - L.sun.height / 2 | 0);
     }
     if (sc.moon) { const my = Math.round(HY * .44); ctx.drawImage(L.moon, bx - L.moon.width / 2 | 0, my - L.moon.height / 2 | 0); }
-    // mountains
     ctx.drawImage(L.far, Math.round(-30 - cam * 1), 0);
     if (L.deck) { const dx = ((t * (4 + sc.wind * 10)) % 80); ctx.drawImage(L.deck, Math.round(dx - 80), -6); ctx.drawImage(L.deck, Math.round(dx - 80 + L.deck.width), -6); }
     for (const c of clouds) if (c.depth < .7) ctx.drawImage(c.spr, Math.round(c.x - cam * c.depth * 2), c.y);
-    // bolts (behind hills)
     for (const b of bolts) {
       if (Math.floor(b.life * 30) % 3 === 0) continue;
-      const draw = (pts, col, w) => { for (let i = 1; i < pts.length; i++) { line(pts[i - 1][0] - w, pts[i - 1][1], pts[i][0] - w, pts[i][1], col); if (w) line(pts[i - 1][0] + w, pts[i - 1][1], pts[i][0] + w, pts[i][1], col); } };
-      draw(b.pts, 'rgba(170,150,255,.6)', 1); draw(b.pts, '#fffbe0', 0); b.branches.forEach(br => draw(br, '#e8e0ff', 0));
+      const dr = (pts, col, w) => { for (let i = 1; i < pts.length; i++) { line(pts[i - 1][0] - w, pts[i - 1][1], pts[i][0] - w, pts[i][1], col); if (w) line(pts[i - 1][0] + w, pts[i - 1][1], pts[i][0] + w, pts[i][1], col); } };
+      dr(b.pts, 'rgba(170,150,255,.6)', 1); dr(b.pts, '#fffbe0', 0); b.branches.forEach(br => dr(br, '#e8e0ff', 0));
     }
     ctx.drawImage(L.near, Math.round(-50 - cam * 2.2), 0);
-    // ground + grid
     ctx.drawImage(L.ground, 0, HY);
     drawGrid();
     if (sc.theme === 'snow' || sc.cold) { for (let i = 0; i < 18; i++) { const x = (i * 37 + Math.floor(t * 2) * 13) % W, y = HY + 4 + (i * 53) % (H - HY - 4); if ((i + Math.floor(t * 3)) % 4 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(x, y, 1, 1); ctx.fillStyle = 'rgba(180,220,255,.8)'; ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); } } }
     if (sc.tornado) drawTornado();
-    if (fire) { ctx.drawImage(fire.c, 0, FY - fire.fh + 6); }
-    // fireflies (back)
+    if (fire) ctx.drawImage(fire.c, 0, FY - fire.fh + 6);
     for (const f of flies) { const b = .5 + .5 * Math.sin(t * 3 + f.p); if (b < .4) continue; ctx.fillStyle = `rgba(200,255,90,${b * .35})`; ctx.fillRect(Math.round(f.x) - 1, Math.round(f.y) - 1, 3, 3); ctx.fillStyle = `rgba(230,255,140,${b})`; ctx.fillRect(Math.round(f.x), Math.round(f.y), 1, 1); }
-    // splashes
     for (const s of splashes) {
       if (s.ring) { const r = Math.round((.45 - s.life) * 10) + 1; ctx.fillStyle = 'rgba(190,230,255,.6)'; ctx.fillRect(Math.round(s.x - r), Math.round(s.y), 1, 1); ctx.fillRect(Math.round(s.x + r), Math.round(s.y), 1, 1); ctx.fillRect(Math.round(s.x - r + 1), Math.round(s.y - 1), r * 2 - 1, 1); }
       else { ctx.fillStyle = 'rgba(200,235,255,.85)'; ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1); }
     }
-    // character
     drawChar();
     for (const p of puffs) { const a = p.life / 1.2; ctx.fillStyle = `rgba(255,255,255,${a * .7})`; const r = Math.round((1.2 - p.life) * 3) + 1; ctx.fillRect(Math.round(p.x - r), Math.round(p.y - r / 2), r * 2, r); }
     for (const z of zzz) { const a = Math.min(1, z.life); ctx.fillStyle = `rgba(220,220,255,${a})`; const x = Math.round(z.x), y = Math.round(z.y); ctx.fillRect(x, y, 4, 1); ctx.fillRect(x + 2, y + 1, 1, 1); ctx.fillRect(x + 1, y + 2, 1, 1); ctx.fillRect(x, y + 3, 4, 1); }
-    // near clouds
     for (const c of clouds) if (c.depth >= .7) ctx.drawImage(c.spr, Math.round(c.x - cam * c.depth * 2), c.y);
-    // birds
     ctx.fillStyle = sc.night ? '#ccc' : '#1a1c2c';
-    for (const b of birds) { const x = Math.round(b.x), y = Math.round(b.y), f = Math.floor(t * 8 + b.p) % 2; if (f) { ctx.fillRect(x - 2, y - 1, 1, 1); ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x, y + 0, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x + 2, y - 1, 1, 1); } else { ctx.fillRect(x - 2, y + 1, 1, 1); ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x + 2, y + 1, 1, 1); } }
-    // precipitation
+    for (const b of birds) { const x = Math.round(b.x), y = Math.round(b.y), f = Math.floor(t * 8 + b.p) % 2; if (f) { ctx.fillRect(x - 2, y - 1, 1, 1); ctx.fillRect(x - 1, y, 1, 1); ctx.fillRect(x, y, 1, 1); ctx.fillRect(x + 1, y, 1, 1); ctx.fillRect(x + 2, y - 1, 1, 1); } else { ctx.fillRect(x - 2, y + 1, 1, 1); ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x + 2, y + 1, 1, 1); } }
     for (const d of drops) {
       const x = Math.round(d.x), y = Math.round(d.y);
       if (d.type === 'rain') { ctx.fillStyle = d.near > .5 ? 'rgba(200,232,255,.85)' : 'rgba(170,210,255,.55)'; const sl = d.vx / d.vy; for (let k = 0; k < d.len; k++) ctx.fillRect(Math.round(x - sl * k), y - k, 1, 1); }
@@ -774,13 +745,10 @@ const Scene = (() => {
       else if (d.type === 'pellet') { ctx.fillStyle = '#eef6ff'; ctx.fillRect(x, y, 1, 1); ctx.fillStyle = 'rgba(150,200,255,.7)'; ctx.fillRect(x, y - 1, 1, 1); }
       else if (d.type === 'hail') { ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y, d.sz + 1, d.sz + 1); ctx.fillStyle = '#a8c0dc'; ctx.fillRect(x + d.sz, y + d.sz, 1, 1); }
     }
-    // wind streaks + leaves
     if (sc.wind > .3) { ctx.fillStyle = `rgba(255,255,255,${.15 + sc.wind * .3})`; for (const s of streaks) ctx.fillRect(Math.round(s.x), Math.round(s.y), s.len, 1); }
     for (const l of leaves) { ctx.fillStyle = l.c; const f = Math.floor(t * 10 + l.p) % 2; ctx.fillRect(Math.round(l.x), Math.round(l.y), f ? 2 : 1, f ? 1 : 2); }
     for (const e of embers) { ctx.fillStyle = e.c; ctx.fillRect(Math.round(e.x), Math.round(e.y), 1, 1); }
-    // fog
     if (L.fog) { const o1 = (t * 5) % (W * 2), o2 = (t * 9) % (W * 2); ctx.globalAlpha = sc.smoke ? .5 : .75; ctx.drawImage(L.fog, -o1, 0); ctx.drawImage(L.fog, -o1 + W * 2, 0); ctx.globalAlpha = .45; ctx.drawImage(L.fog, -o2, 12); ctx.drawImage(L.fog, -o2 + W * 2, 12); ctx.globalAlpha = 1; ctx.fillStyle = sc.dim ? 'rgba(90,100,120,.25)' : 'rgba(220,226,230,.22)'; ctx.fillRect(0, 0, W, H); }
-    // heat shimmer
     if (sc.heat || sc.fire) {
       const bg = buf.getContext('2d'); bg.drawImage(cv, 0, 0);
       const amp = sc.fire ? 1.6 : 1.2;
@@ -788,8 +756,7 @@ const Scene = (() => {
       if (sc.heat) { ctx.fillStyle = 'rgba(255,140,40,.08)'; ctx.fillRect(0, 0, W, H); }
     }
     if (sc.fire) { ctx.fillStyle = `rgba(255,80,20,${.08 + Math.sin(t * 8) * .03})`; ctx.fillRect(0, 0, W, H); }
-    // frost & icicles
-    if (L.frost) { ctx.drawImage(L.frost, 0, 0); }
+    if (L.frost) ctx.drawImage(L.frost, 0, 0);
     if (L.icicles) { ctx.drawImage(L.icicles, 0, L.icicleTop); ctx.fillStyle = '#bfe6ff'; for (const d of drips) ctx.fillRect(Math.round(d.x), Math.round(d.y), 1, 2); }
     if (sc.dim) { ctx.fillStyle = 'rgba(10,10,40,.12)'; ctx.fillRect(0, 0, W, H); }
   }
@@ -804,9 +771,7 @@ const Scene = (() => {
       const bxx = W / 2 + j * 26 - cam * 4;
       for (let y = HY + 1; y < H; y++) { const f = (y - HY) / gh; ctx.globalAlpha = clamp(f * 2.2, .1, .85); ctx.fillRect(Math.round(vp + (bxx - vp) * f), y, 1, 1); }
     }
-    ctx.globalAlpha = 1;
-    // horizon glow
-    ctx.fillStyle = gc; ctx.globalAlpha = .55; ctx.fillRect(0, HY, W, 1); ctx.globalAlpha = 1;
+    ctx.globalAlpha = .55; ctx.fillRect(0, HY, W, 1); ctx.globalAlpha = 1;
   }
 
   function drawTornado() {
@@ -814,7 +779,6 @@ const Scene = (() => {
     const cxAt = u => tx + Math.sin(t * 1.7 + u * 5) * 7 * u + Math.sin(t * .6) * 3 * (1 - u);
     const rAt = u => lerp(34, 3, Math.pow(u, .5));
     const C = ['#7d8a6e', '#5a6650', '#3e4838', '#232a1e'];
-    // back debris
     for (const d of debris) if (Math.sin(d.a) < 0) { const y = top + (bot - top) * d.u, r = rAt(d.u) * 1.5; ctx.fillStyle = d.c; ctx.fillRect(Math.round(cxAt(d.u) + Math.cos(d.a) * r), Math.round(y + Math.sin(d.a) * 2), d.z, d.z); }
     for (let y = top; y <= bot; y++) {
       const u = (y - top) / (bot - top), cx = cxAt(u), r = rAt(u);
@@ -826,7 +790,6 @@ const Scene = (() => {
         ctx.fillStyle = C[idx]; ctx.fillRect(Math.round(cx + x), y, 1, 1);
       }
     }
-    // dust base
     const bcx = cxAt(1);
     for (let y = -6; y <= 2; y++) for (let x = -22; x <= 22; x++) { const dd = (x * x) / 484 + (y * y) / 36; if (dd < 1 && BAYER[(y + 8) & 3][(x + 64) & 3] < (1 - dd) * 18) { ctx.fillStyle = ((x + Math.floor(t * 20)) & 4) ? '#6a5a3a' : '#8a7a5a'; ctx.fillRect(Math.round(bcx + x), bot + y, 1, 1); } }
     for (const d of debris) if (Math.sin(d.a) >= 0) { const y = top + (bot - top) * d.u, r = rAt(d.u) * 1.5; ctx.fillStyle = d.c; ctx.fillRect(Math.round(cxAt(d.u) + Math.cos(d.a) * r), Math.round(y + Math.sin(d.a) * 2), d.z, d.z); }
@@ -853,7 +816,7 @@ const Scene = (() => {
     setSun(f) { sunFrac = f; },
     setMoon(p) { if (Math.abs(p - moonP) > .01) { moonP = p; build(); } },
     setTilt(x, y) { tiltT.x = clamp(x, -1, 1); tiltT.y = clamp(y, -1, 1); },
-    jump() { if (ch.jy <= 0) { ch.vy = 130; ch.jy = .1; SFX.jump(); } },
+    jump() { if (ch.jy <= 0) { ch.vy = 130; ch.jy = .1; ch.wink = .6; SFX.jump(); } },
     head() { const h = L.charHead || { x: W * .66, y: FY - 40 }; return { x: h.x * scale, y: h.y * scale }; },
     heroBottom() { return (FY + 6) * scale; },
     pause(p) { running = !p; last = performance.now(); },
@@ -862,19 +825,18 @@ const Scene = (() => {
 })();
 
 /* =================== APP STATE =================== */
-let loc = store.get('loc', null);           // {lat, lon, name, mode:'gps'|'manual'}
-let data = store.get('data', null);         // {wx, aq, alerts, at}
-let busy = false, offline = false, count = 60, demo = null, started = false;
+let loc = store.get('loc', null);
+let data = store.get('data', null);
+let busy = false, offline = false, count = 60, demo = null, started = false, pendingSearch = false;
 
-/* =================== FORMATTERS =================== */
 const isF = () => settings.units === 'F';
 const fT = f => f == null || isNaN(f) ? '--' : Math.round(isF() ? f : (f - 32) * 5 / 9) + '°';
 const fW = m => m == null ? '--' : isF() ? Math.round(m) + ' mph' : Math.round(m * 1.609) + ' km/h';
 const fWn = m => m == null ? '--' : String(Math.round(isF() ? m : m * 1.609));
 const fP = i => i == null ? '--' : isF() ? i.toFixed(2) + ' in' : (i * 25.4).toFixed(1) + ' mm';
 const fPres = h => h == null ? '--' : isF() ? (h * .02953).toFixed(2) + ' inHg' : Math.round(h) + ' hPa';
-function fVis(v, unit) { if (v == null) return '--'; const m = /ft/.test(unit || '') ? v * .3048 : v; if (isF()) { const mi = m / 1609.34; return mi >= 10 ? '10+ mi' : mi.toFixed(mi < 1 ? 1 : 0) + ' mi'; } const km = m / 1000; return km >= 16 ? '16+ km' : km.toFixed(km < 1 ? 1 : 0) + ' km'; }
 const visMeters = (v, unit) => /ft/.test(unit || '') ? v * .3048 : v;
+function fVis(v, unit) { if (v == null) return '--'; const m = visMeters(v, unit); if (isF()) { const mi = m / 1609.34; return mi >= 10 ? '10+ mi' : mi.toFixed(mi < 1 ? 1 : 0) + ' mi'; } const km = m / 1000; return km >= 16 ? '16+ km' : km.toFixed(km < 1 ? 1 : 0) + ' km'; }
 const mins = s => parseInt(s.slice(11, 13)) * 60 + parseInt(s.slice(14, 16));
 function fTime(s) { if (!s) return '--'; let h = parseInt(s.slice(11, 13)); const m = s.slice(14, 16), ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${h}:${m} ${ap}`; }
 function fHour(s) { let h = parseInt(s.slice(11, 13)); const ap = h >= 12 ? 'P' : 'A'; h = h % 12 || 12; return h + ap; }
@@ -887,7 +849,6 @@ function uvRisk(u) { return u < 3 ? ['Low', '#5dff7a'] : u < 6 ? ['Moderate', '#
 function aqiCat(a) { return a <= 50 ? ['Good', '#5dff7a'] : a <= 100 ? ['Moderate', '#ffd84a'] : a <= 150 ? ['Unhealthy (Sensitive)', '#ff9a3b'] : a <= 200 ? ['Unhealthy', '#ff3b5c'] : a <= 300 ? ['Very Unhealthy', '#c45cff'] : ['Hazardous', '#8a1630']; }
 function tempColor(f) { const st = [[0, '#b58cff'], [32, '#4fb4ff'], [50, '#5dff7a'], [70, '#ffd84a'], [85, '#ff7a3b'], [100, '#ff3b5c']]; if (f <= st[0][0]) return st[0][1]; for (let i = 1; i < st.length; i++) if (f <= st[i][0]) { const t = (f - st[i - 1][0]) / (st[i][0] - st[i - 1][0]); return rgb(mix(hex2rgb(st[i - 1][1]), hex2rgb(st[i][1]), t)); } return st[st.length - 1][1]; }
 
-/* =================== NETWORK =================== */
 async function fetchT(url, ms = 12000, opts = {}) {
   const ac = new AbortController(); const id = setTimeout(() => ac.abort(), ms);
   try { return await fetch(url, { ...opts, signal: ac.signal, cache: 'no-store' }); } finally { clearTimeout(id); }
@@ -930,7 +891,6 @@ function getPosition() {
 }
 const distKm = (a, b, c, d) => { const R = 6371, dLa = (c - a) * Math.PI / 180, dLo = (d - b) * Math.PI / 180; const x = Math.sin(dLa / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
 
-/* =================== REFRESH =================== */
 async function refresh(manual = false) {
   if (busy) return; busy = true; setSpin(true); count = 60; titleStatus(loc ? 'LOADING WORLD…' : 'REQUESTING LOCATION…');
   try {
@@ -968,9 +928,7 @@ async function refresh(manual = false) {
     }
   } finally { busy = false; setSpin(false); updateRing(); }
 }
-let pendingSearch = false;
 
-/* =================== SCENE FROM DATA =================== */
 function sceneFromData() {
   const w = data.wx, c = w.current, code = c.weather_code; let kind = kindFor(code);
   const ev = (data.alerts || []).map(a => (a.event || '').toLowerCase()), has = re => ev.some(e => re.test(e));
@@ -984,16 +942,15 @@ function sceneFromData() {
   let smoke = false;
   if (pm > 55.4 && ['clear', 'mostly', 'partly', 'cloudy'].includes(kind)) { kind = 'fog'; smoke = true; }
   if (has(/dense fog/) && ['clear', 'mostly', 'partly', 'cloudy'].includes(kind)) kind = 'fog';
-  const sr = w.daily.sunrise[0], ss = w.daily.sunset[0], now = mins(c.time);
-  const rise = mins(sr), set = mins(ss);
+  const now = mins(c.time), rise = mins(w.daily.sunrise[0]), set = mins(w.daily.sunset[0]);
   const dusk = Math.abs(now - rise) < 40 || Math.abs(now - set) < 40;
   Scene.setSun((now - rise) / Math.max(1, set - rise));
   return makeScene({ kind, night: !c.is_day, dusk, heat, cold, fire, tornado, windy, temp: T, heavy: code === 75 || code === 86, smoke });
 }
 
-/* =================== RENDER =================== */
 const DROP = '<svg class="drop" viewBox="0 0 5 7" shape-rendering="crispEdges" fill="#4fb4ff"><rect x="2" y="0" width="1" height="2"/><rect x="1" y="2" width="3" height="1"/><rect x="0" y="3" width="5" height="3"/><rect x="1" y="6" width="3" height="1"/><rect x="1" y="3" width="1" height="1" fill="#cfeaff"/></svg>';
-function hourIdx() { const w = data.wx, key = w.current.time.slice(0, 13); let i = w.hourly.time.findIndex(t => t.slice(0, 13) === key); return i < 0 ? 0 : i; }
+const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function hourIdx() { const w = data.wx, key = w.current.time.slice(0, 13); const i = w.hourly.time.findIndex(t => t.slice(0, 13) === key); return i < 0 ? 0 : i; }
 function render() {
   if (!data || !data.wx) return;
   $('#loc-name').textContent = (loc && loc.name) || 'UNKNOWN LAND';
@@ -1016,22 +973,20 @@ function statusLine() {
   if (!data) return;
   const s = $('#status-line');
   if (offline) { s.style.color = '#ffb3c0'; s.textContent = `⚠ OFFLINE · SAVED ${ago(data.at)}`; }
-  else { s.style.color = '#bfffc8'; const d = new Date(data.at); s.textContent = `● LIVE · UPDATED ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toUpperCase()}`; }
+  else { s.style.color = '#bfffc8'; s.textContent = `● LIVE · UPDATED ${new Date(data.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toUpperCase()}`; }
 }
 function renderAlerts() {
-  const p = $('#p-alerts'), list = $('#alerts-list');
+  const p = $('#p-alerts');
   if (!data.alerts.length) { p.hidden = true; return; }
   p.hidden = false;
-  list.innerHTML = data.alerts.map((a, i) => `<div class="alert-item" data-i="${i}"><h3>⚠ ${esc(a.event)}</h3><p>${esc(a.headline || '')}${a.instr ? '\n\nWHAT TO DO: ' + esc(a.instr) : ''}${a.desc ? '\n\n' + esc(a.desc) : ''}</p></div>`).join('');
+  $('#alerts-list').innerHTML = data.alerts.map((a, i) => `<div class="alert-item" data-i="${i}"><h3>⚠ ${esc(a.event)}</h3><p>${esc(a.headline || '')}${a.instr ? '\n\nWHAT TO DO: ' + esc(a.instr) : ''}${a.desc ? '\n\n' + esc(a.desc) : ''}</p></div>`).join('');
 }
-const esc = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
 function renderNext() {
   const w = data.wx, c = w.current, hi = hourIdx(), m = w.minutely_15;
   const T = c.temperature_2m, kind = kindFor(c.weather_code);
   const word = kind === 'sleet' ? 'Sleet' : (kind === 'snow' || T <= 33) ? 'Snow' : 'Rain';
   const wet = a => a >= .005;
-  let slots = null, labels = ['NOW', '+15', '+30', '+45'];
+  let slots = null; const labels = ['NOW', '+15', '+30', '+45'];
   if (m && m.time && m.precipitation) { let i = m.time.findIndex(t => t >= c.time); if (i > 0 && m.time[i] > c.time) i--; if (i < 0) i = 0; slots = m.precipitation.slice(i, i + 4); }
   let text;
   const probNext = Math.max(w.hourly.precipitation_probability[hi] || 0, w.hourly.precipitation_probability[hi + 1] || 0);
@@ -1051,28 +1006,24 @@ function renderNext() {
   const trend = nt > T + .5 ? '▲ warming to' : nt < T - .5 ? '▼ cooling to' : '● holding near';
   $('#next-sub').textContent = `${trend} ${fT(nt)} by ${fHour(nTime).replace('A', ' AM').replace('P', ' PM')} · ${probNext}% chance of precip · wind ${fW(w.hourly.wind_speed_10m[hi + 1])}`;
 }
-
 function renderHourly() {
   const w = data.wx, h = w.hourly, hi = hourIdx(), N = Math.min(48, h.time.length - hi);
   let html = '';
   for (let k = 0; k < N; k++) {
-    const i = hi + k, t = h.time[i], newDay = k > 0 && t.slice(11, 13) === '00';
-    const pp = h.precipitation_probability[i];
+    const i = hi + k, t = h.time[i], newDay = k > 0 && t.slice(11, 13) === '00', pp = h.precipitation_probability[i];
     html += `<div class="hc ${k === 0 ? 'now' : ''} ${newDay ? 'newday day0' : ''}" data-day="${newDay ? dow(t) : ''}"><div class="t">${k === 0 ? 'NOW' : fHour(t)}</div><img alt="" src="${iconURL(kindFor(h.weather_code[i]), !h.is_day[i])}"><div class="tp">${fT(h.temperature_2m[i])}</div><div class="pp">${pp >= 10 ? DROP + pp + '%' : ''}</div><div class="wd">${fWn(h.wind_speed_10m[i])}${isF() ? 'mph' : 'kmh'}</div></div>`;
   }
   $('#h-row').innerHTML = html;
-  // graph
-  const cv = $('#h-graph'), cw = 58 * N, ch = 90, dpr = Math.min(2, window.devicePixelRatio || 1);
-  cv.width = cw * dpr; cv.height = ch * dpr; cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  const cv = $('#h-graph'), cw = 58 * N, chh = 90, dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = cw * dpr; cv.height = chh * dpr; cv.style.width = cw + 'px'; cv.style.height = chh + 'px';
   const g = cv.getContext('2d'); g.scale(dpr, dpr); g.imageSmoothingEnabled = false;
   const temps = h.temperature_2m.slice(hi, hi + N), lo = Math.min(...temps), hiT = Math.max(...temps), rng = Math.max(1, hiT - lo);
   const yOf = v => Math.round(8 + (1 - (v - lo) / rng) * 44);
-  for (let k = 0; k < N; k++) { const p = h.precipitation_probability[hi + k] || 0; if (p < 5) continue; const bh = Math.round(p / 100 * 26); g.fillStyle = 'rgba(79,180,255,.55)'; g.fillRect(k * 58 + 14, ch - bh - 2, 30, bh); g.fillStyle = '#4fb4ff'; g.fillRect(k * 58 + 14, ch - bh - 2, 30, 2); }
+  for (let k = 0; k < N; k++) { const p = h.precipitation_probability[hi + k] || 0; if (p < 5) continue; const bh = Math.round(p / 100 * 26); g.fillStyle = 'rgba(79,180,255,.55)'; g.fillRect(k * 58 + 14, chh - bh - 2, 30, bh); g.fillStyle = '#4fb4ff'; g.fillRect(k * 58 + 14, chh - bh - 2, 30, 2); }
   g.fillStyle = 'rgba(255,255,255,.08)'; for (let y = 8; y < 56; y += 11) g.fillRect(0, y, cw, 1);
-  for (let k = 1; k < N; k++) { const x0 = (k - 1) * 58 + 29, x1 = k * 58 + 29, y0 = yOf(temps[k - 1]), y1 = yOf(temps[k]); const steps = 12; for (let s = 0; s <= steps; s++) { const x = Math.round(lerp(x0, x1, s / steps) / 3) * 3, y = Math.round(lerp(y0, y1, s / steps) / 3) * 3; g.fillStyle = '#2a1033'; g.fillRect(x + 2, y + 2, 4, 4); g.fillStyle = '#ffb13b'; g.fillRect(x, y, 4, 4); } }
+  for (let k = 1; k < N; k++) { const x0 = (k - 1) * 58 + 29, x1 = k * 58 + 29, y0 = yOf(temps[k - 1]), y1 = yOf(temps[k]); for (let s = 0; s <= 12; s++) { const x = Math.round(lerp(x0, x1, s / 12) / 3) * 3, y = Math.round(lerp(y0, y1, s / 12) / 3) * 3; g.fillStyle = '#2a1033'; g.fillRect(x + 2, y + 2, 4, 4); g.fillStyle = '#ffb13b'; g.fillRect(x, y, 4, 4); } }
   for (let k = 0; k < N; k++) { const x = k * 58 + 29, y = yOf(temps[k]); g.fillStyle = '#000'; g.fillRect(x - 4, y - 4, 10, 10); g.fillStyle = tempColor(temps[k]); g.fillRect(x - 3, y - 3, 8, 8); if (temps[k] === hiT || temps[k] === lo) { g.fillStyle = '#fff'; g.font = '16px VT323, monospace'; g.fillText(fT(temps[k]), x - 8, y < 30 ? y + 22 : y - 8); } }
 }
-
 function renderDaily() {
   const d = data.wx.daily, c = data.wx.current, n = d.time.length;
   const gmin = Math.min(...d.temperature_2m_min), gmax = Math.max(...d.temperature_2m_max), span = Math.max(1, gmax - gmin);
@@ -1091,7 +1042,6 @@ function renderDaily() {
   }
   $('#d-list').innerHTML = html;
 }
-
 function meter(frac, color, n = 10) { let s = '<div class="meter">'; for (let i = 0; i < n; i++) s += `<i style="${i < Math.round(frac * n) ? `background:${color}` : ''}"></i>`; return s + '</div>'; }
 function renderStats() {
   const w = data.wx, c = w.current, h = w.hourly, d = w.daily, hi = hourIdx(), hu = w.hourly_units || {};
@@ -1102,7 +1052,7 @@ function renderStats() {
   const p3 = h.pressure_msl[Math.max(0, hi - 3)], pt = c.pressure_msl - p3, ptxt = pt > 1 ? '▲ Rising' : pt < -1 ? '▼ Falling' : '● Steady';
   const vm = vis == null ? null : visMeters(vis, visUnit), vtxt = vm == null ? '' : vm > 16000 ? 'Max render distance' : vm > 8000 ? 'Clear' : vm > 3000 ? 'Hazy' : vm > 1000 ? 'Poor' : 'Fog of war';
   const [uvT, uvC] = uvRisk(uv || 0);
-  const dewF = dew, comfort = dewF == null ? '' : dewF < 50 ? 'Dry & comfy' : dewF < 60 ? 'Comfortable' : dewF < 65 ? 'A bit sticky' : dewF < 70 ? 'Sticky' : 'Swamp mode';
+  const comfort = dew == null ? '' : dew < 50 ? 'Dry & comfy' : dew < 60 ? 'Comfortable' : dew < 65 ? 'A bit sticky' : dew < 70 ? 'Sticky' : 'Swamp mode';
   const aq = data.aq && data.aq.current, aqi = aq && isFinite(aq.us_aqi) ? Math.round(aq.us_aqi) : null, [aqT, aqC] = aqi != null ? aqiCat(aqi) : ['Unavailable', '#555'];
   const dl = d.daylight_duration ? d.daylight_duration[0] : (mins(d.sunset[0]) - mins(d.sunrise[0])) * 60;
   const tiles = [
@@ -1121,7 +1071,6 @@ function renderStats() {
   ];
   $('#stats').innerHTML = tiles.map(([k, v, s, x]) => `<div class="st"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div>${x}</div>`).join('');
 }
-
 function renderSky() {
   const d = data.wx.daily, c = data.wx.current, mp = moonPhase();
   const rise = mins(d.sunrise[0]), set = mins(d.sunset[0]), now = mins(c.time), f = clamp((now - rise) / Math.max(1, set - rise), 0, 1);
@@ -1139,7 +1088,6 @@ function renderSky() {
     <div class="moon-row" style="grid-column:1/-1"><img src="${moonPhaseURL(mp.phase)}" alt=""><div class="sky-cell">MOON PHASE<b>${mp.name}</b>${mp.illum}% illuminated</div></div></div>`;
 }
 
-/* =================== QUIPS =================== */
 function quip() {
   const s = Scene.scene;
   const Q = {
@@ -1148,18 +1096,18 @@ function quip() {
     hail: ['Free ice cubes! (Do not catch them with your face.)', 'Park the car under cover if you can!'],
     storm: ['When thunder roars, go indoors!', 'Do NOT be the tallest pixel outside.', '+10 Drama. +0 Picnics.'],
     sleet: ['Rain and snow had a crunchy baby.', 'Roads = ice rink. Drive like a sloth.'],
-    snow: ['Snowball fight? I have 0 gloves.', 'Bridges freeze first. Take it slow!', 'Achievement unlocked: Snow Day?'],
-    rain: ['My umbrella has 1 HP left.', 'Splash damage incoming!', 'Puddles: now with 100% more puddle.'],
+    snow: ['Snow on the \'stache. Worth it.', 'Bridges freeze first. Take it slow!', 'Achievement unlocked: Snow Day?'],
+    rain: ['Rain will NOT ruin this hair. Umbrella up.', 'Splash damage incoming!', 'Puddles: now with 100% more puddle.'],
     drizzle: ['It is not raining. It is spitting. Rudely.', 'Mist-tery weather.'],
     fog: ['Render distance: 2 blocks.', 'Low beams, not high beams!', 'Fog of war is real.'],
     heat: ['I am melting at 60 FPS.', 'Hydrate or diedrate. Drink water!', 'Sunscreen is a power-up.'],
-    cold: ['My pixels are frozen.', 'Layers = extra armor.', 'Brrr. Loading body heat…'],
-    wind: ['Hold onto your hat. Literally.', 'Trampolines: please secure.'],
+    cold: ['My mustache has icicles.', 'Layers = extra armor.', 'Brrr. Loading body heat…'],
+    wind: ['The hair. Is. Holding. Barely.', 'Trampolines: please secure.'],
     night: ['Zzz… night mode engaged.', '…five more minutes…', 'Shh. The pixels are sleeping.'],
-    cloudy: ['Grey skies, but a decent level.', 'The sun is buffering.'],
-    clear: ['Sun\'s out, pixels out!', 'Perfect stats today. Go touch grass!', 'Weather: S-Rank.'],
+    cloudy: ['Grey skies, still smirking.', 'The sun is buffering.'],
+    clear: ['Sun\'s out, smirk out.', 'Perfect stats today. Go touch grass!', 'Weather: S-Rank. Like the mustache.'],
   };
-  let k = s.tornado ? 'tornado' : s.fire ? 'fire' : s.kind === 'hail' ? 'hail' : s.kind === 'storm' ? 'storm' : s.kind === 'sleet' ? 'sleet' : s.kind === 'snow' ? 'snow' : s.precip === 'rain' ? 'rain' : s.kind === 'drizzle' ? 'drizzle' : s.fog ? 'fog' : s.heat ? 'heat' : s.cold ? 'cold' : s.wind > .6 ? 'wind' : s.night ? 'night' : s.kind === 'cloudy' ? 'cloudy' : 'clear';
+  const k = s.tornado ? 'tornado' : s.fire ? 'fire' : s.kind === 'hail' ? 'hail' : s.kind === 'storm' ? 'storm' : s.kind === 'sleet' ? 'sleet' : s.kind === 'snow' ? 'snow' : s.precip === 'rain' ? 'rain' : s.kind === 'drizzle' ? 'drizzle' : s.fog ? 'fog' : s.heat ? 'heat' : s.cold ? 'cold' : s.wind > .6 ? 'wind' : s.night ? 'night' : s.kind === 'cloudy' ? 'cloudy' : 'clear';
   return pick(Q[k]);
 }
 let bubbleT = 0;
@@ -1171,16 +1119,14 @@ function showBubble(text) {
   clearTimeout(bubbleT); bubbleT = setTimeout(() => b.hidden = true, 3400);
 }
 
-/* =================== UI HELPERS =================== */
 let toastT = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200); }
 function titleStatus(s) { const e = $('#title-status'); if (e) e.textContent = s; }
 function setSpin(on) { $('#refresh-btn').classList.toggle('spin', on); }
 function updateRing() {
-  const btn = $('#refresh-btn'), fg = $('#ring-fg');
-  btn.classList.toggle('off', !settings.auto);
+  $('#refresh-btn').classList.toggle('off', !settings.auto);
   $('#count').textContent = settings.auto ? count : '⟳';
-  fg.style.strokeDashoffset = settings.auto ? (106.8 * (1 - count / 60)).toFixed(1) : 0;
+  $('#ring-fg').style.strokeDashoffset = settings.auto ? (106.8 * (1 - count / 60)).toFixed(1) : 0;
   $('#auto-btn').classList.toggle('on', settings.auto);
   $('#auto-label').textContent = settings.auto ? 'AUTO' : 'MANUAL';
 }
@@ -1193,7 +1139,6 @@ function syncSettingsUI() {
 function openSheet(id) { $('#' + id).hidden = false; SFX.blip(); if (id === 'search') setTimeout(() => $('#q').focus(), 250); }
 function closeSheet(id) { $('#' + id).hidden = true; }
 
-/* =================== DEMO / FX GALLERY =================== */
 const DEMOS = [
   ['SUNNY MEADOWS', { kind: 'clear', temp: 74 }], ['NEON NIGHT', { kind: 'clear', night: true, temp: 66 }], ['GOLDEN HOUR', { kind: 'mostly', dusk: true }],
   ['PARTLY CLOUDY', { kind: 'partly' }], ['OVERCAST', { kind: 'cloudy' }], ['FOG', { kind: 'fog' }], ['DRIZZLE', { kind: 'drizzle' }], ['RAIN', { kind: 'rain' }],
@@ -1211,25 +1156,22 @@ function setDemo(i) {
 }
 function exitDemo() { demo = null; $('#demo-bar').hidden = true; if (data) { Scene.set(sceneFromData()); renderHero(); } SFX.off(); }
 
-/* =================== ORIENTATION LOCK =================== */
 function applyOrientation() {
   const html = document.documentElement, coarse = matchMedia('(pointer: coarse)').matches;
   const land = window.innerWidth > window.innerHeight && coarse;
-  let ang = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+  const ang = (screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
   html.classList.toggle('rot-cw', land && (ang === 270 || ang === -90));
   html.classList.toggle('rot-ccw', land && !(ang === 270 || ang === -90));
   requestAnimationFrame(() => { Scene.resize(); layoutHero(); });
 }
 function layoutHero() { const tb = $('#topbar').offsetHeight; $('#hero').style.height = Math.max(200, Scene.heroBottom() - tb) + 'px'; }
 
-/* =================== TILT =================== */
 function onTilt(e) { if (!settings.tilt) return; const gx = clamp((e.gamma || 0) / 30, -1, 1), gy = clamp(((e.beta || 45) - 45) / 30, -1, 1); Scene.setTilt(gx, gy); $('#hero-text').style.transform = `rotateY(${gx * 14}deg) rotateX(${-gy * 8}deg)`; }
 async function enableTilt() {
   try { if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') { const r = await DeviceOrientationEvent.requestPermission(); if (r !== 'granted') throw 0; } window.addEventListener('deviceorientation', onTilt); return true; }
   catch (e) { return false; }
 }
 
-/* =================== EVENTS =================== */
 function bind() {
   hydrateIcons();
   const tap = (sel, fn) => $(sel).addEventListener('click', e => { SFX.init(); fn(e); });
@@ -1272,13 +1214,11 @@ function bind() {
   tap('#alert-banner', () => { SFX.alarm(); $('#p-alerts').scrollIntoView({ behavior: 'smooth' }); });
   $('#alerts-list').addEventListener('click', e => { const it = e.target.closest('.alert-item'); if (it) { it.classList.toggle('open'); SFX.blip(); } });
   $('#d-list').addEventListener('click', e => { const r = e.target.closest('.drow'); if (r) { r.classList.toggle('open'); SFX.blip(); } });
-  $('#scroller').addEventListener('scroll', () => { if (!$('#bubble').hidden && $('#scroller').scrollTop > 40) $('#bubble').hidden = true; }, { passive: true });
-  // pull to refresh
   const sc = $('#scroller'), ptr = $('#ptr'), ptrT = $('#ptr-text'); let y0 = null, pulled = 0;
+  sc.addEventListener('scroll', () => { if (!$('#bubble').hidden && sc.scrollTop > 40) $('#bubble').hidden = true; }, { passive: true });
   sc.addEventListener('touchstart', e => { y0 = sc.scrollTop <= 0 ? e.touches[0].clientY : null; pulled = 0; }, { passive: true });
   sc.addEventListener('touchmove', e => { if (y0 == null) return; pulled = e.touches[0].clientY - y0; if (pulled > 10) { ptr.style.opacity = Math.min(1, pulled / 80); ptrT.textContent = pulled > 80 ? 'RELEASE TO REFRESH!' : 'PULL TO REFRESH'; } }, { passive: true });
   sc.addEventListener('touchend', () => { if (y0 != null && pulled > 80) { SFX.init(); refresh(true); } y0 = null; ptr.style.opacity = 0; });
-  // lifecycle
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { Scene.pause(true); SFX.suspend(); }
     else { Scene.pause(false); SFX.resume(); if (settings.auto && data && Date.now() - data.at > 60000) refresh(false); statusLine(); }
@@ -1302,7 +1242,6 @@ function startGame() {
   setTimeout(() => { if (data) showBubble(quip()); }, 900);
 }
 
-/* =================== BOOT =================== */
 function boot() {
   bind(); syncSettingsUI(); applyOrientation();
   if (data && data.wx) { offline = !navigator.onLine; try { render(); } catch (e) { console.warn(e); } }
@@ -1312,7 +1251,14 @@ function boot() {
     count--; if (count <= 0) refresh(false); updateRing();
     if (count % 15 === 0) statusLine();
   }, 1000);
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    const hadController = !!navigator.serviceWorker.controller; let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => {
+      r.update().catch(() => { });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update().catch(() => { }); });
+    }).catch(() => { });
+  }
 }
 boot();
 })();

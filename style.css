@@ -11,7 +11,6 @@ body{font-family:var(--vt);font-size:20px;position:fixed;inset:0}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 input{-webkit-user-select:text;user-select:text}
 
-/* ---------- App frame + rotation lock ---------- */
 #app{position:fixed;top:0;left:0;width:100vw;height:100%;overflow:hidden;background:#0d0b1f}
 html.rot-ccw #app{width:100vh;height:100vw;transform-origin:top left;transform:rotate(-90deg);top:100vh;left:0}
 html.rot-cw  #app{width:100vh;height:100vw;transform-origin:top left;transform:rotate(90deg);top:0;left:100vw}
@@ -32,11 +31,9 @@ html.rot-cw  #app{width:100vh;height:100vw;transform-origin:top left;transform:r
 #app.glitch #stage{animation:glitch .5s steps(5)}
 @keyframes glitch{0%{filter:hue-rotate(0) contrast(1)}20%{filter:hue-rotate(90deg) contrast(1.6);transform:translateX(-4px)}40%{filter:invert(.2);transform:translateX(5px) skewX(4deg)}60%{filter:hue-rotate(-60deg);transform:translateX(-2px)}100%{filter:none;transform:none}}
 
-/* ---------- Scroller ---------- */
 #scroller{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;z-index:5}
 #ptr{position:absolute;left:0;right:0;top:calc(var(--sat) + 8px);text-align:center;font-family:var(--pix);font-size:9px;color:var(--accent);opacity:0;transition:opacity .15s;text-shadow:2px 2px 0 #000;pointer-events:none}
 
-/* ---------- Top bar ---------- */
 #topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:6px;padding:calc(var(--sat) + 8px) 10px 8px;background:linear-gradient(rgba(8,6,22,.85),rgba(8,6,22,.55) 70%,transparent)}
 .tb-btn{height:40px;min-width:40px;display:grid;place-items:center;background:var(--panel);box-shadow:0 -3px 0 var(--hi),0 3px 0 var(--lo),-3px 0 0 var(--hi),3px 0 0 var(--lo);margin:3px;position:relative;transition:transform .06s}
 .tb-btn:active,.tb-pill:active,.pix-btn:active{transform:translateY(3px)}
@@ -59,7 +56,6 @@ html.rot-cw  #app{width:100vh;height:100vw;transform-origin:top left;transform:r
 i[data-icon]{display:inline-block;width:16px;height:16px;flex:none}
 i[data-icon] svg{width:100%;height:100%;display:block}
 
-/* ---------- Hero ---------- */
 #hero{position:relative;padding:4px 16px 0;perspective:600px}
 #status-line{font-family:var(--pix);font-size:8px;color:#ffb3c0;min-height:10px;text-shadow:2px 2px 0 #000;margin:2px 0 6px}
 #alert-banner{display:block;width:100%;text-align:left;font-family:var(--pix);font-size:9px;line-height:1.5;padding:8px 10px;margin:0 0 10px;background:#b3132e;color:#fff;box-shadow:0 -3px 0 #ff8a9c,0 3px 0 #5a0012,-3px 0 0 #ff8a9c,3px 0 0 #5a0012;animation:alarm 1s steps(2) infinite}
@@ -75,7 +71,6 @@ i[data-icon] svg{width:100%;height:100%;display:block}
 #tap-hint{position:absolute;bottom:6px;right:12px;font-family:var(--pix);font-size:7px;color:rgba(255,255,255,.55);text-shadow:1px 1px 0 #000;animation:blink 1.6s steps(2) infinite}
 @keyframes blink{50%{opacity:0}}
 
-/* ---------- Panels ---------- */
 #panels{padding:6px 14px calc(var(--sab) + 90px);position:relative}
 .panel{background:var(--panel);margin:0 4px 22px;padding:14px 12px;position:relative;
   box-shadow:0 -4px 0 var(--hi),0 4px 0 var(--lo),-4px 0 0 var(--hi),4px 0 0 var(--lo),6px 10px 0 rgba(0,0,0,.45);
@@ -116,7 +111,7 @@ i[data-icon] svg{width:100%;height:100%;display:block}
 .drow .lo{font-size:22px;color:#9fb3ff;text-align:right}
 .drow .hi{font-size:22px;color:#fff}
 .rng{height:10px;background:#1d1b38;position:relative;box-shadow:0 0 0 2px #000}
-.rng b{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#4fb4ff,#5dff7a,#ffd84a,#ff7a3b,#ff3b5c);background-size:var(--bw) 100%;background-position:var(--bx) 0}
+.rng b{position:absolute;top:0;bottom:0}
 .rng .nowdot{position:absolute;top:-3px;width:6px;height:16px;background:#fff;box-shadow:0 0 0 2px #000}
 .dmore{grid-column:1/-1;display:none;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:18px;color:var(--muted);padding:8px 4px 2px}
 .dmore b{color:#fff;font-weight:normal}
@@ -149,7 +144,6 @@ i[data-icon] svg{width:100%;height:100%;display:block}
 #foot{text-align:center;padding:10px 0 20px;color:var(--muted);font-size:16px}
 #foot p{margin:14px 0 0}
 
-/* ---------- Buttons / sheets ---------- */
 .pix-btn{font-family:var(--pix);font-size:9px;padding:12px 14px;background:#2c2560;color:#fff;display:inline-flex;align-items:center;gap:8px;justify-content:center;
   box-shadow:0 -3px 0 #8c82ff,0 3px 0 #120e33,-3px 0 0 #8c82ff,3px 0 0 #120e33,4px 6px 0 rgba(0,0,0,.4);margin:4px;transition:transform .06s}
 .pix-btn.sm{padding:10px 12px}
@@ -192,7 +186,6 @@ i[data-icon] svg{width:100%;height:100%;display:block}
   box-shadow:0 -3px 0 var(--accent),0 3px 0 var(--accent),-3px 0 0 var(--accent),3px 0 0 var(--accent);opacity:0;transition:all .2s steps(4);pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 
-/* ---------- Title ---------- */
 #title{position:absolute;inset:0;z-index:70;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 45%,rgba(13,11,31,.78),rgba(8,6,22,.97));text-align:center}
 #title.out{animation:title-out .6s steps(6) forwards}
 @keyframes title-out{to{clip-path:inset(50% 0 50% 0);opacity:0}}
