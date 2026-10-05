@@ -1,5 +1,5 @@
 // LeWeather service worker — network-first so updates show up right away; cache is the offline fallback.
-const VERSION = 'leweather-v1.2.0';
+const VERSION = 'leweather-v1.3.0';
 const SHELL = ['./', './index.html', './style.css', './app.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 

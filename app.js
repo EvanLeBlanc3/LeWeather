@@ -1150,11 +1150,11 @@ const DEMOS = [
 function setDemo(i) {
   i = (i + DEMOS.length) % DEMOS.length; demo = { i, name: DEMOS[i][0] };
   const o = DEMOS[i][1]; Scene.setSun(o.dusk ? .02 : .5); Scene.set(makeScene(o));
-  $('#demo-name').textContent = `${i + 1}/${DEMOS.length} · ${demo.name}`; $('#demo-bar').hidden = false;
+  $('#demo-name').textContent = `${i + 1}/${DEMOS.length} · ${demo.name}`; $('#demo-bar').hidden = false; $('#app').classList.add('demo-on');
   if (data) renderHero(); else { $('#level').textContent = Scene.scene.level + ' · DEMO'; $('#cond').textContent = demo.name; }
   $('#scroller').scrollTo({ top: 0, behavior: 'smooth' });
 }
-function exitDemo() { demo = null; $('#demo-bar').hidden = true; if (data) { Scene.set(sceneFromData()); renderHero(); } SFX.off(); }
+function exitDemo() { demo = null; $('#demo-bar').hidden = true; $('#app').classList.remove('demo-on'); if (data) { Scene.set(sceneFromData()); renderHero(); } SFX.off(); }
 
 function applyOrientation() {
   const html = document.documentElement, coarse = matchMedia('(pointer: coarse)').matches;
@@ -1219,6 +1219,17 @@ function bind() {
   sc.addEventListener('touchstart', e => { y0 = sc.scrollTop <= 0 ? e.touches[0].clientY : null; pulled = 0; }, { passive: true });
   sc.addEventListener('touchmove', e => { if (y0 == null) return; pulled = e.touches[0].clientY - y0; if (pulled > 10) { ptr.style.opacity = Math.min(1, pulled / 80); ptrT.textContent = pulled > 80 ? 'RELEASE TO REFRESH!' : 'PULL TO REFRESH'; } }, { passive: true });
   sc.addEventListener('touchend', () => { if (y0 != null && pulled > 80) { SFX.init(); refresh(true); } y0 = null; ptr.style.opacity = 0; });
+  // watch mode: push UI off-screen
+  const setWatch = on => {
+    $('#app').classList.toggle('watch', on); $('#bubble').hidden = true;
+    if (on) { $('#scroller').scrollTo({ top: 0 }); SFX.whoosh(); toast('WATCH MODE · TAP ▲ TO RETURN'); } else SFX.jump();
+  };
+  tap('#hide-ui', e => { e.stopPropagation(); setWatch(true); });
+  tap('#show-ui', () => setWatch(false));
+  $('#stage').addEventListener('click', () => { if (!$('#app').classList.contains('watch')) return; SFX.init(); Scene.jump(); showBubble(quip()); });
+  let wy = null;
+  $('#stage').addEventListener('touchstart', e => { wy = e.touches[0].clientY; }, { passive: true });
+  $('#stage').addEventListener('touchend', e => { if (wy != null && $('#app').classList.contains('watch') && wy - e.changedTouches[0].clientY > 70) setWatch(false); wy = null; });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { Scene.pause(true); SFX.suspend(); }
     else { Scene.pause(false); SFX.resume(); if (settings.auto && data && Date.now() - data.at > 60000) refresh(false); statusLine(); }

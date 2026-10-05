@@ -197,3 +197,21 @@ i[data-icon] svg{width:100%;height:100%;display:block}
 #title-status{font-size:20px;color:#9fe8ff;margin-top:36px;min-height:22px}
 .press{font-family:var(--pix);font-size:13px;color:#ffd84a;margin-top:18px;animation:blink 1s steps(2) infinite;text-shadow:3px 3px 0 #000}
 .copy{font-family:var(--pix);font-size:7px;color:#7a74b8;margin-top:48px}
+
+/* ---------- Hide-UI / Watch mode ---------- */
+.auto-wrap{position:relative;display:flex}
+#hide-ui{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;width:34px;height:20px;font-size:12px;line-height:20px;
+  color:rgba(255,255,255,.85);background:rgba(13,11,31,.28);box-shadow:0 0 0 2px rgba(255,255,255,.25);text-shadow:1px 1px 0 #000;z-index:2}
+#hide-ui:active{transform:translateX(-50%) translateY(2px)}
+#scroller{transition:transform .55s cubic-bezier(.6,-0.2,.4,1.2)}
+#app.watch #scroller{transform:translateY(110%);pointer-events:none}
+#app.watch #vignette{opacity:.5}
+#show-ui{position:absolute;left:50%;bottom:calc(var(--sab) + 14px);transform:translate(-50%,160%);z-index:35;display:flex;flex-direction:column;align-items:center;
+  padding:6px 14px 4px;color:#fff;background:rgba(13,11,31,.3);box-shadow:0 0 0 2px rgba(255,255,255,.3);text-shadow:1px 1px 0 #000;opacity:0;
+  transition:transform .45s steps(6),opacity .3s;pointer-events:none}
+#show-ui span{font-size:16px;line-height:16px;animation:nudge 1.2s steps(3) infinite}
+#show-ui small{font-family:var(--pix);font-size:6px;letter-spacing:1px;margin-top:3px;opacity:.8}
+#app.watch #show-ui{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+#app.watch.demo-on #show-ui{bottom:calc(var(--sab) + 84px)}
+@keyframes nudge{50%{transform:translateY(-3px)}}
+#alert-banner[hidden],#p-alerts[hidden]{display:none}
